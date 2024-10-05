@@ -111,7 +111,7 @@ class Window : public olc::PixelGameEngine
 
 	olc::vi2d camera;
 
-	std::vector<std::unique_ptr<PhysicsObject>> objects;
+	std::list<std::unique_ptr<PhysicsObject>> objects;
 
 	//void create_explosion(olc::vf2d& pos) {
 	//	for (int i = 0; i < 10; i++) {

@@ -5,6 +5,11 @@
 #include "Random.h"
 #include <memory>
 
+enum BounceDeathActions {
+	DO_NOTHING,
+	EXPLOSION_LARGE
+};
+
 class PhysicsObject {
 public:
 	olc::vf2d v;
@@ -60,6 +65,38 @@ public:
 };
 std::unique_ptr<olc::Sprite> Debris::sprite = nullptr;
 std::unique_ptr<olc::Decal> Debris::decal = nullptr;
+
+
+class Missile : public PhysicsObject {
+public:
+	static std::unique_ptr<olc::Sprite> sprite;
+	static std::unique_ptr<olc::Decal> decal;
+	float scale = 1;
+
+	Missile(float r = 10) : PhysicsObject(r) {
+		n_bounces = 0;
+		set_size(r);
+	}
+
+	void set_size(float radius) {
+		if (sprite) {
+			scale = radius / sprite->height;
+		}
+	}
+
+	void draw(olc::PixelGameEngine& canvas, olc::vf2d& offset) {
+		//canvas.DrawRotatedDecal(pos + offset, decal.get(), atan2(v.y, v.x), { sprite->width * scale / 2, sprite->height * scale / 2 }, { scale,scale });
+		canvas.DrawDecal(pos + offset, decal.get(), { scale,scale });
+	}
+
+	int bounce_death_action() override {
+		dead = true;
+		return 1;
+	}
+};
+std::unique_ptr<olc::Sprite> Missile::sprite = nullptr;
+std::unique_ptr<olc::Decal> Missile::decal = nullptr;
+
 
 // Override base class with your custom functionality
 class Window : public olc::PixelGameEngine
@@ -117,7 +154,9 @@ class Window : public olc::PixelGameEngine
 
 		for (auto& obj : objects) {
 			olc::vf2d dir = obj->pos - expl_pos;
-			dir /= powf(dir.mag(), 2);
+			float div = powf(dir.mag(), 2);
+			if (div < 0.1) div = 0.1f;
+			dir /= div;
 			dir *= radius*radius;
 			obj->v = dir;
 			obj->stable = false;
@@ -128,7 +167,7 @@ class Window : public olc::PixelGameEngine
 			d->pos = expl_pos;
 			d->v.x = random2() * radius*2;
 			d->v.y = random2() * radius*2;
-			d->set_size(3);
+			d->set_size(2.5);
 			objects.push_back(std::move(d));
 		}
 	}
@@ -146,6 +185,9 @@ public:
 		// Called once at the start, so create things here
 		Debris::sprite = std::make_unique<olc::Sprite>("tut_fragment.png");
 		Debris::decal = std::make_unique<olc::Decal>(Debris::sprite.get());
+
+		Missile::sprite = std::make_unique<olc::Sprite>("missile.png");
+		Missile::decal = std::make_unique<olc::Decal>(Missile::sprite.get());
 
 		terrain = std::vector<std::vector<TerrainType>>(terrain_size.y, std::vector<TerrainType>(terrain_size.x, SKY));
 		Perlin1D perlin(terrain_size.x);
@@ -187,6 +229,13 @@ public:
 
 		if (GetMouse(1).bPressed) {
 			boom(GetMousePos() + camera, 10);
+		}
+
+		if (GetKey(olc::SPACE).bPressed) {
+			std::unique_ptr<Missile> m = std::make_unique<Missile>();
+			m->pos = GetMousePos() + camera;
+			objects.push_back(std::move(m));
+
 		}
 
 		camera.x = std::max(0, std::min(terrain_size.x - ScreenWidth(), camera.x));
@@ -231,7 +280,11 @@ public:
 						obj->n_bounces--;
 					}
 					else if (obj->n_bounces == 0) {
-						obj->bounce_death_action();
+						int action = obj->bounce_death_action();
+						if (action == BounceDeathActions::EXPLOSION_LARGE) {
+							boom(obj->pos, 20);
+						}
+						obj->n_bounces--;
 					}
 				}
 				else {

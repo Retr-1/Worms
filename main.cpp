@@ -11,13 +11,15 @@ public:
 	olc::vf2d a;
 	olc::vf2d pos;
 	float friction = 0.8f;
-
 	float r;
+	int n_bounces = -1;
+	bool dead = false;
 	bool stable = false;
 
 	PhysicsObject(float r=10) : r(r) {}
 
 	virtual void draw(olc::PixelGameEngine& canvas, olc::vf2d& offset) {}
+	virtual void on_zero_bounce() {}
 };
 
 class Dummy : public PhysicsObject {
@@ -35,10 +37,16 @@ public:
 	static std::unique_ptr<olc::Sprite> sprite;
 	static std::unique_ptr<olc::Decal> decal;
 
-	Debris(int r = 4) : PhysicsObject(r) {}
+	Debris(int r = 4) : PhysicsObject(r) {
+		n_bounces = 4;
+	}
 
 	void draw(olc::PixelGameEngine& canvas, olc::vf2d& offset) override {
 		canvas.DrawRotatedDecal(pos+offset, decal.get(), atan2(v.y, v.x), {2,2}, {0.5,0.5}, olc::GREEN);
+	}
+
+	void on_zero_bounce() {
+		dead = true;
 	}
 };
 std::unique_ptr<olc::Sprite> Debris::sprite = nullptr;
@@ -123,7 +131,7 @@ public:
 		if (GetMouse(1).bPressed) {
 			for (int i = 0; i < 10; i++) {
 				std::unique_ptr<Debris> d = std::make_unique<Debris>();
-				d->pos = GetMousePos();
+				d->pos = GetMousePos() + camera;
 				d->v.x = random2() * 10;
 				d->v.y = random2() * 10;
 				objects.push_back(std::move(d));
@@ -167,6 +175,13 @@ public:
 						obj->v.x = 0;
 						obj->v.y = 0;
 					}
+
+					if (obj->n_bounces > 0) {
+						obj->n_bounces--;
+					}
+					else if (obj->n_bounces == 0) {
+						obj->on_zero_bounce();
+					}
 				}
 				else {
 					obj->pos = potential_pos;
@@ -190,9 +205,14 @@ public:
 		}
 
 		olc::vf2d offset = camera * -1;
+			
+		objects.erase(std::remove_if(objects.begin(), objects.end(), [](auto& el) {return el->dead; }), objects.end());
+
 		for (auto& obj : objects) {
 			obj->draw(*this, offset);
 		}
+
+		
 
 		return true;
 	}

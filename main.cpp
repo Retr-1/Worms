@@ -2,6 +2,31 @@
 #define OLC_PGE_APPLICATION
 #include "olcPixelGameEngine.h"
 #include "perlin.h"
+#include <memory>
+
+class PhysicsObject {
+public:
+	olc::vf2d v;
+	olc::vf2d a;
+	olc::vf2d pos;
+
+	float r;
+	bool stable = false;
+
+	PhysicsObject(float r=10) : r(r) {}
+
+	virtual void draw(olc::PixelGameEngine& canvas, olc::vf2d& offset) {}
+};
+
+class Dummy : public PhysicsObject {
+public:
+	using PhysicsObject::PhysicsObject;
+
+	void draw(olc::PixelGameEngine& canvas, olc::vf2d& offset) override {
+		canvas.DrawCircle(pos+offset, r);
+		canvas.DrawLine(pos+offset, pos+offset + v.norm() * r);
+	}
+};
 
 // Override base class with your custom functionality
 class Window : public olc::PixelGameEngine
@@ -15,6 +40,8 @@ class Window : public olc::PixelGameEngine
 	olc::vi2d terrain_size = { 800, 400 };
 
 	olc::vi2d camera;
+
+	std::vector<std::unique_ptr<PhysicsObject>> objects;
 
 public:
 	Window()
@@ -57,10 +84,26 @@ public:
 		if (GetMouseY() > ScreenHeight() - border) {
 			camera.y++;
 		}
+		if (GetMouse(0).bPressed) {
+			std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
+			//d->r = 100;
+			std::cout << "pr\n";
+			d->pos = GetMousePos() + camera;
+
+			objects.push_back(std::move(d));
+		}
 
 		camera.x = std::max(0, std::min(terrain_size.x - ScreenWidth(), camera.x));
 		camera.y = std::max(0, std::min(terrain_size.y - ScreenWidth(), camera.y));
 		//std::cout << camera.str() << '\n';
+
+		for (auto& obj : objects) {
+			//obj.a += olc::vf2d(0, 10);
+			obj->v += olc::vf2d(0,10) * fElapsedTime;
+			obj->pos += obj->v * fElapsedTime;
+
+			//obj.a = olc::vf2d(0, 0);
+		}
 
 		for (int x = 0; x < ScreenWidth(); x++) {
 			for (int y = 0; y<ScreenHeight(); y++) {
@@ -74,6 +117,12 @@ public:
 				}
 			}
 		}
+
+		olc::vf2d offset = camera * -1;
+		for (auto& obj : objects) {
+			obj->draw(*this, offset);
+		}
+
 		return true;
 	}
 };

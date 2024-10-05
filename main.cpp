@@ -43,6 +43,15 @@ class Window : public olc::PixelGameEngine
 
 	std::vector<std::unique_ptr<PhysicsObject>> objects;
 
+	void collide(std::unique_ptr<PhysicsObject>& obj) {
+		float v_angle = std::atan2(obj->v.y, obj->v.x);
+		float da = 3.14f / 20;
+		olc::vf2d vec_response = { 0,0 };
+		for (float a = v_angle - 3.1415f / 2; a < v_angle + 3.1415f / 2; a += da) {
+			
+		}
+	}
+
 public:
 	Window()
 	{
@@ -87,6 +96,7 @@ public:
 		if (GetMouse(0).bPressed) {
 			std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
 			//d->r = 100;
+			d->r = 10;
 			std::cout << "pr\n";
 			d->pos = GetMousePos() + camera;
 
@@ -97,12 +107,38 @@ public:
 		camera.y = std::max(0, std::min(terrain_size.y - ScreenWidth(), camera.y));
 		//std::cout << camera.str() << '\n';
 
-		for (auto& obj : objects) {
-			//obj.a += olc::vf2d(0, 10);
-			obj->v += olc::vf2d(0,10) * fElapsedTime;
-			obj->pos += obj->v * fElapsedTime;
+		for (int i = 0; i < 5; i++) {
+			for (auto& obj : objects) {
+				obj->a += olc::vf2d(0, 10);
+				obj->v += obj->a * fElapsedTime;
 
-			//obj.a = olc::vf2d(0, 0);
+				olc::vf2d potential_pos = obj->pos + obj->v * fElapsedTime;
+				float v_angle = std::atan2(obj->v.y, obj->v.x);
+				olc::vf2d vec_response = { 0,0 };
+				bool hit = false;
+				for (float a = v_angle - 3.1415f / 2; a < v_angle + 3.1415f / 2; a += 3.1415f / 8) {
+					olc::vf2d vec_mv = { cosf(a) * obj->r, sinf(a) * obj->r };
+					olc::vf2d test_pos = potential_pos + vec_mv;
+
+					if (test_pos.x < 0 || test_pos.x > terrain_size.x || test_pos.y < 0 || test_pos.y > terrain_size.y) continue;
+
+					if (terrain[(int)test_pos.y][(int)test_pos.x] == GROUND) {
+						hit = true;
+						vec_response += vec_mv;
+					}
+				}
+
+				if (hit) {
+					vec_response *= -1;
+					vec_response = vec_response.norm();
+					obj->v = obj->v - 2 * (obj->v.dot(vec_response)) * vec_response;
+				}
+				else {
+					obj->pos = potential_pos;
+				}
+
+				obj->a = olc::vf2d(0, 0);
+			}
 		}
 
 		for (int x = 0; x < ScreenWidth(); x++) {

@@ -2,6 +2,7 @@
 #define OLC_PGE_APPLICATION
 #include "olcPixelGameEngine.h"
 #include "perlin.h"
+#include "Random.h"
 #include <memory>
 
 class PhysicsObject {
@@ -29,6 +30,20 @@ public:
 	}
 };
 
+class Debris : public PhysicsObject {
+public:
+	static std::unique_ptr<olc::Sprite> sprite;
+	static std::unique_ptr<olc::Decal> decal;
+
+	Debris(int r = 4) : PhysicsObject(r) {}
+
+	void draw(olc::PixelGameEngine& canvas, olc::vf2d& offset) override {
+		canvas.DrawRotatedDecal(pos+offset, decal.get(), atan2(v.y, v.x), {2,2}, {0.5,0.5}, olc::GREEN);
+	}
+};
+std::unique_ptr<olc::Sprite> Debris::sprite = nullptr;
+std::unique_ptr<olc::Decal> Debris::decal = nullptr;
+
 // Override base class with your custom functionality
 class Window : public olc::PixelGameEngine
 {
@@ -44,14 +59,14 @@ class Window : public olc::PixelGameEngine
 
 	std::vector<std::unique_ptr<PhysicsObject>> objects;
 
-	void collide(std::unique_ptr<PhysicsObject>& obj) {
-		float v_angle = std::atan2(obj->v.y, obj->v.x);
-		float da = 3.14f / 20;
-		olc::vf2d vec_response = { 0,0 };
-		for (float a = v_angle - 3.1415f / 2; a < v_angle + 3.1415f / 2; a += da) {
-			
-		}
-	}
+	//void create_explosion(olc::vf2d& pos) {
+	//	for (int i = 0; i < 10; i++) {
+	//		std::unique_ptr<Debris> d;
+	//		d->pos = pos;
+	//		d->v.x = random2();
+
+	//	}
+	//}
 
 public:
 	Window()
@@ -64,6 +79,9 @@ public:
 	bool OnUserCreate() override
 	{
 		// Called once at the start, so create things here
+		Debris::sprite = std::make_unique<olc::Sprite>("tut_fragment.png");
+		Debris::decal = std::make_unique<olc::Decal>(Debris::sprite.get());
+
 		terrain = std::vector<std::vector<TerrainType>>(terrain_size.y, std::vector<TerrainType>(terrain_size.x, SKY));
 		Perlin1D perlin(terrain_size.x);
 		perlin.set_seed(0, 0.5);
@@ -94,14 +112,22 @@ public:
 		if (GetMouseY() > ScreenHeight() - border) {
 			camera.y++;
 		}
+
 		if (GetMouse(0).bPressed) {
 			std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
-			//d->r = 100;
 			d->r = 5;
-			//std::cout << "pr\n";
 			d->pos = GetMousePos() + camera;
-
 			objects.push_back(std::move(d));
+		}
+
+		if (GetMouse(1).bPressed) {
+			for (int i = 0; i < 10; i++) {
+				std::unique_ptr<Debris> d = std::make_unique<Debris>();
+				d->pos = GetMousePos();
+				d->v.x = random2() * 10;
+				d->v.y = random2() * 10;
+				objects.push_back(std::move(d));
+			}
 		}
 
 		camera.x = std::max(0, std::min(terrain_size.x - ScreenWidth(), camera.x));

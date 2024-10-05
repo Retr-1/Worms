@@ -134,6 +134,10 @@
   <ItemGroup>
     <ClInclude Include="olcPixelGameEngine.h" />
     <ClInclude Include="perlin.h" />
+    <ClInclude Include="Random.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="tut_fragment.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

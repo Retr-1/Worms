@@ -9,6 +9,7 @@ public:
 	olc::vf2d v;
 	olc::vf2d a;
 	olc::vf2d pos;
+	float friction = 0.8f;
 
 	float r;
 	bool stable = false;
@@ -96,8 +97,8 @@ public:
 		if (GetMouse(0).bPressed) {
 			std::unique_ptr<Dummy> d = std::make_unique<Dummy>();
 			//d->r = 100;
-			d->r = 10;
-			std::cout << "pr\n";
+			d->r = 5;
+			//std::cout << "pr\n";
 			d->pos = GetMousePos() + camera;
 
 			objects.push_back(std::move(d));
@@ -109,13 +110,15 @@ public:
 
 		for (int i = 0; i < 5; i++) {
 			for (auto& obj : objects) {
+				if (obj->stable) continue;
+
 				obj->a += olc::vf2d(0, 10);
 				obj->v += obj->a * fElapsedTime;
 
 				olc::vf2d potential_pos = obj->pos + obj->v * fElapsedTime;
 				float v_angle = std::atan2(obj->v.y, obj->v.x);
 				olc::vf2d vec_response = { 0,0 };
-				bool hit = false;
+				bool b_collision = false;
 				for (float a = v_angle - 3.1415f / 2; a < v_angle + 3.1415f / 2; a += 3.1415f / 8) {
 					olc::vf2d vec_mv = { cosf(a) * obj->r, sinf(a) * obj->r };
 					olc::vf2d test_pos = potential_pos + vec_mv;
@@ -123,15 +126,21 @@ public:
 					if (test_pos.x < 0 || test_pos.x > terrain_size.x || test_pos.y < 0 || test_pos.y > terrain_size.y) continue;
 
 					if (terrain[(int)test_pos.y][(int)test_pos.x] == GROUND) {
-						hit = true;
+						b_collision = true;
 						vec_response += vec_mv;
 					}
 				}
 
-				if (hit) {
+				if (b_collision) {
 					vec_response *= -1;
 					vec_response = vec_response.norm();
 					obj->v = obj->v - 2 * (obj->v.dot(vec_response)) * vec_response;
+					obj->v *= obj->friction;
+					if (obj->v.mag() < 0.1f) {
+						obj->stable = true;
+						obj->v.x = 0;
+						obj->v.y = 0;
+					}
 				}
 				else {
 					obj->pos = potential_pos;

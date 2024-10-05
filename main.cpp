@@ -19,7 +19,7 @@ public:
 	PhysicsObject(float r=10) : r(r) {}
 
 	virtual void draw(olc::PixelGameEngine& canvas, olc::vf2d& offset) {}
-	virtual void on_zero_bounce() {}
+	virtual int bounce_death_action() { return 0; }
 };
 
 class Dummy : public PhysicsObject {
@@ -36,17 +36,26 @@ class Debris : public PhysicsObject {
 public:
 	static std::unique_ptr<olc::Sprite> sprite;
 	static std::unique_ptr<olc::Decal> decal;
+	float scale = 1;
+	float default_size = 8;
 
 	Debris(int r = 4) : PhysicsObject(r) {
 		n_bounces = 4;
 	}
 
 	void draw(olc::PixelGameEngine& canvas, olc::vf2d& offset) override {
-		canvas.DrawRotatedDecal(pos+offset, decal.get(), atan2(v.y, v.x), {2,2}, {0.5,0.5}, olc::GREEN);
+		canvas.DrawRotatedDecal(pos+offset, decal.get(), atan2(v.y, v.x), {default_size*scale/2,default_size*scale/2}, {scale,scale}, olc::GREEN);
 	}
 
-	void on_zero_bounce() {
+	void set_size(float size) {
+		// default_size*x = size
+		scale = size / default_size;
+		r = size;
+	}
+
+	int bounce_death_action() {
 		dead = true;
+		return 0;
 	}
 };
 std::unique_ptr<olc::Sprite> Debris::sprite = nullptr;
@@ -75,6 +84,54 @@ class Window : public olc::PixelGameEngine
 
 	//	}
 	//}
+
+	void boom(const olc::vf2d& expl_pos, float radius) {
+		auto CircleBresenham = [&](int xc, int yc, int r)
+			{
+				// Taken from wikipedia
+				int x = 0;
+				int y = r;
+				int p = 3 - 2 * r;
+				if (!r) return;
+
+				auto drawline = [&](int sx, int ex, int ny)
+					{
+						for (int i = sx; i < ex; i++)
+							if (ny >= 0 && ny < terrain_size.y && i >= 0 && i < terrain_size.x)
+								terrain[ny][i] = SKY;
+					};
+
+				while (y >= x)
+				{
+					// Modified to draw scan-lines instead of edges
+					drawline(xc - x, xc + x, yc - y);
+					drawline(xc - y, xc + y, yc - x);
+					drawline(xc - x, xc + x, yc + y);
+					drawline(xc - y, xc + y, yc + x);
+					if (p < 0) p += 4 * x++ + 6;
+					else p += 4 * (x++ - y--) + 10;
+				}
+			};
+
+		CircleBresenham(expl_pos.x, expl_pos.y, radius);
+
+		for (auto& obj : objects) {
+			olc::vf2d dir = obj->pos - expl_pos;
+			dir /= powf(dir.mag(), 2);
+			dir *= radius*radius;
+			obj->v = dir;
+			obj->stable = false;
+		}
+
+		for (int i = 0; i < 30; i++) {
+			std::unique_ptr<Debris> d = std::make_unique<Debris>();
+			d->pos = expl_pos;
+			d->v.x = random2() * radius*2;
+			d->v.y = random2() * radius*2;
+			d->set_size(3);
+			objects.push_back(std::move(d));
+		}
+	}
 
 public:
 	Window()
@@ -129,13 +186,7 @@ public:
 		}
 
 		if (GetMouse(1).bPressed) {
-			for (int i = 0; i < 10; i++) {
-				std::unique_ptr<Debris> d = std::make_unique<Debris>();
-				d->pos = GetMousePos() + camera;
-				d->v.x = random2() * 10;
-				d->v.y = random2() * 10;
-				objects.push_back(std::move(d));
-			}
+			boom(GetMousePos() + camera, 10);
 		}
 
 		camera.x = std::max(0, std::min(terrain_size.x - ScreenWidth(), camera.x));
@@ -180,7 +231,7 @@ public:
 						obj->n_bounces--;
 					}
 					else if (obj->n_bounces == 0) {
-						obj->on_zero_bounce();
+						obj->bounce_death_action();
 					}
 				}
 				else {
@@ -204,10 +255,10 @@ public:
 			}
 		}
 
-		olc::vf2d offset = camera * -1;
 			
 		objects.erase(std::remove_if(objects.begin(), objects.end(), [](auto& el) {return el->dead; }), objects.end());
 
+		olc::vf2d offset = camera * -1;
 		for (auto& obj : objects) {
 			obj->draw(*this, offset);
 		}

@@ -135,11 +135,11 @@ std::unique_ptr<olc::Sprite> Missile::sprite = nullptr;
 std::unique_ptr<olc::Decal> Missile::decal = nullptr;
 
 
-class Player : public PhysicsObject, public SpriteObject {
+class Worm : public PhysicsObject, public SpriteObject {
 public:
 	int flip = 1;
 
-	Player(float r=10) : PhysicsObject(r), SpriteObject(r) {
+	Worm(float r=10) : PhysicsObject(r), SpriteObject(r) {
 		n_bounces = -1;
 		friction = 0.7;
 	}
@@ -247,7 +247,7 @@ public:
 		Missile::sprite = std::make_unique<olc::Sprite>("missile.png");
 		Missile::decal = std::make_unique<olc::Decal>(Missile::sprite.get());
 
-		Player::init_sprite("worm.png");
+		Worm::init_sprite("worm.png");
 
 		terrain = std::vector<std::vector<TerrainType>>(terrain_size.y, std::vector<TerrainType>(terrain_size.x, SKY));
 		Perlin1D perlin(terrain_size.x);
@@ -281,7 +281,7 @@ public:
 		}
 
 		if (GetMouse(0).bPressed) {
-			std::unique_ptr<Player> d = std::make_unique<Player>();
+			std::unique_ptr<Worm> d = std::make_unique<Worm>();
 			d->set_r(5);
 			d->pos = GetMousePos() + camera;
 			objects.push_back(std::move(d));

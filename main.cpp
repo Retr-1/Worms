@@ -55,8 +55,8 @@ public:
 	void set_size(float desired_width, float desired_height) {
 		if (sprite) {
 			// sprite->height*scale = desired_height
-			scaleX = desired_width / sprite->height;
-			scaleY = desired_width / sprite->width;
+			scaleX = desired_width / sprite->width;
+			scaleY = desired_height / sprite->height;
 		}
 	}
 };
@@ -137,7 +137,7 @@ std::unique_ptr<olc::Decal> Missile::decal = nullptr;
 
 class Player : public PhysicsObject, public SpriteObject {
 public:
-	bool flip = false;
+	int flip = 1;
 
 	Player(float r=10) : PhysicsObject(r), SpriteObject(r) {
 		n_bounces = -1;
@@ -148,19 +148,17 @@ public:
 		olc::vf2d draw_pos = pos + offset;
 		canvas.DrawCircle(draw_pos, r);
 
-		float scalex = r * 2 / sprite->width;
-		float scaley = r * 2 / sprite->height;
-		if (flip) scalex *= -1;
-
-		draw_pos.x -= sprite->width * scalex / 2;
-		draw_pos.y -= sprite->height * scaley / 2;
+		draw_pos.x -= r*flip;
+		draw_pos.y -= r;
+		//draw_pos.x -= sprite->width * scaleX / 2;
+		//draw_pos.y -= sprite->height * scaleY / 2;
 		
-		canvas.DrawDecal(draw_pos, decal.get(), { scalex,scaley });
+		canvas.DrawDecal(draw_pos, decal.get(), { scaleX*flip,scaleY });
 	}
 
 	void set_r(float r) {
 		this->r = r;
-		set_size(r, r);
+		set_size(r*2, r*2);
 	}
 
 };
@@ -284,8 +282,7 @@ public:
 
 		if (GetMouse(0).bPressed) {
 			std::unique_ptr<Player> d = std::make_unique<Player>();
-			d->r = 5;
-			d->set_size(10,10);
+			d->set_r(5);
 			d->pos = GetMousePos() + camera;
 			objects.push_back(std::move(d));
 		}

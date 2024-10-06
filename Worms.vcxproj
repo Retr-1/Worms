@@ -138,6 +138,7 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="tut_fragment.png" />
+    <Image Include="worm.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -34,5 +34,8 @@
     <Image Include="tut_fragment.png">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="worm.png">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>

@@ -179,6 +179,11 @@ class Window : public olc::PixelGameEngine
 
 	std::list<std::unique_ptr<PhysicsObject>> objects;
 
+	float aim_angle = 0;
+	const float aim_r = 8;
+	Worm* selected_player = nullptr;
+	PhysicsObject* following_object = nullptr;
+
 
 	void boom(const olc::vf2d& expl_pos, float radius) {
 		auto CircleBresenham = [&](int xc, int yc, int r)
@@ -282,8 +287,9 @@ public:
 
 		if (GetMouse(0).bPressed) {
 			std::unique_ptr<Worm> d = std::make_unique<Worm>();
-			d->set_r(5);
+			d->set_r(6);
 			d->pos = GetMousePos() + camera;
+			selected_player = d.get();
 			objects.push_back(std::move(d));
 		}
 
@@ -291,11 +297,24 @@ public:
 			boom(GetMousePos() + camera, 10);
 		}
 
-		if (GetKey(olc::SPACE).bPressed) {
+		if (GetKey(olc::N).bPressed) {
 			std::unique_ptr<Missile> m = std::make_unique<Missile>();
 			m->pos = GetMousePos() + camera;
 			objects.push_back(std::move(m));
 
+		}
+		if (GetKey(olc::A).bHeld) {
+			aim_angle -= fElapsedTime;
+		}
+		if (GetKey(olc::D).bHeld) {
+			aim_angle += fElapsedTime;
+		}
+		if (GetKey(olc::SPACE).bPressed) {
+			const float force = 20;
+			if (selected_player) {
+				selected_player->v = olc::vf2d(cosf(aim_angle), sinf(aim_angle)) * force;
+				selected_player->stable = false;
+			}
 		}
 
 		camera.x = std::max(0, std::min(terrain_size.x - ScreenWidth(), camera.x));
@@ -376,6 +395,17 @@ public:
 			obj->draw(*this, offset);
 		}
 
+
+		if (selected_player) {
+			auto dir = olc::vf2d(cosf(aim_angle), sinf(aim_angle));
+			auto dir_l = olc::vf2d(cosf(3.1415 + aim_angle + 1), sinf(3.1415 + aim_angle + 1));
+			auto dir_r = olc::vf2d(cosf(3.1415 + aim_angle - 1), sinf(3.1415 + aim_angle - 1));
+			olc::vf2d arrow_start = selected_player->pos + dir*aim_r - camera;
+			auto arrow_end = arrow_start + dir * 8;
+			DrawLine(arrow_start,arrow_end);
+			DrawLine(arrow_end + dir_l*3, arrow_end);
+			DrawLine(arrow_end + dir_r*3, arrow_end);
+		}
 		
 
 		return true;

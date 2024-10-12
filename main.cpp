@@ -181,8 +181,10 @@ class Window : public olc::PixelGameEngine
 
 	float aim_angle = 0;
 	const float aim_r = 8;
+	float shoot_strength = 0;
+	bool charging = false;
 	Worm* selected_player = nullptr;
-	PhysicsObject* following_object = nullptr;
+	PhysicsObject* followed_object = nullptr;
 
 
 	void boom(const olc::vf2d& expl_pos, float radius) {
@@ -234,6 +236,16 @@ class Window : public olc::PixelGameEngine
 			objects.push_back(std::move(d));
 		}
 	}
+
+	//void shoot_from_player() {
+	//	if (selected_player) {
+	//		std::unique_ptr<Missile> m = std::make_unique<Missile>();
+	//		m->pos = selected_player->pos;
+	//		m->v = olc::vf2d(cosf(aim_angle), sinf(aim_angle)) * shoot_strength;
+	//		objects.push_back(std::move(m));
+	//	}
+	//	shoot_strength = 0;
+	//}
 
 public:
 	Window()
@@ -311,10 +323,16 @@ public:
 		}
 		if (GetKey(olc::SPACE).bPressed) {
 			const float force = 20;
-			if (selected_player) {
+			if (selected_player && selected_player->stable) {
 				selected_player->v = olc::vf2d(cosf(aim_angle), sinf(aim_angle)) * force;
 				selected_player->stable = false;
 			}
+		}
+		if (GetKey(olc::X).bPressed) {
+			charging = true;
+		}
+		if (GetKey(olc::X).bReleased) {
+			charging = false;
 		}
 
 		camera.x = std::max(0, std::min(terrain_size.x - ScreenWidth(), camera.x));
@@ -405,6 +423,25 @@ public:
 			DrawLine(arrow_start,arrow_end);
 			DrawLine(arrow_end + dir_l*3, arrow_end);
 			DrawLine(arrow_end + dir_r*3, arrow_end);
+
+			if (charging) {
+				shoot_strength += fElapsedTime;
+				DrawRect(selected_player->pos + olc::vf2d(0, 5) - camera, olc::vf2d(10, 3), olc::RED);
+				DrawRect(selected_player->pos + olc::vf2d(0, 5) - camera, olc::vf2d(10 * shoot_strength, 3), olc::GREEN);
+				if (shoot_strength >= 1) {
+					shoot_strength = 1;
+					charging = false;
+				}
+			}
+			else if (shoot_strength > 0) {
+				if (selected_player) {
+					std::unique_ptr<Missile> m = std::make_unique<Missile>();
+					m->pos = arrow_end + camera;
+					m->v = dir * shoot_strength * 40;
+					objects.push_back(std::move(m));
+				}
+				shoot_strength = 0;
+			}
 		}
 		
 

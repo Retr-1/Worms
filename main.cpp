@@ -141,7 +141,7 @@ public:
 
 	Worm(float r=10) : PhysicsObject(r), SpriteObject(r) {
 		n_bounces = -1;
-		friction = 0.7;
+		friction = 0.4;
 	}
 
 	void draw(olc::PixelGameEngine& canvas, olc::vf2d& offset) {
@@ -302,6 +302,7 @@ public:
 			d->set_r(6);
 			d->pos = GetMousePos() + camera;
 			selected_player = d.get();
+			followed_object = selected_player;
 			objects.push_back(std::move(d));
 		}
 
@@ -333,6 +334,10 @@ public:
 		}
 		if (GetKey(olc::X).bReleased) {
 			charging = false;
+		}
+
+		if (followed_object) {
+			camera += (followed_object->pos - (camera + GetScreenSize() / 2)) * 0.1f;
 		}
 
 		camera.x = std::max(0, std::min(terrain_size.x - ScreenWidth(), camera.x));

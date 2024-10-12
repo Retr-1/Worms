@@ -122,8 +122,8 @@ public:
 	}
 
 	void draw(olc::PixelGameEngine& canvas, olc::vf2d& offset) {
-		//canvas.DrawRotatedDecal(pos + offset, decal.get(), atan2(v.y, v.x), { sprite->width * scale / 2, sprite->height * scale / 2 }, { scale,scale });
-		canvas.DrawDecal(pos + offset, decal.get(), { scale,scale });
+		canvas.DrawRotatedDecal(pos + offset, decal.get(), atan2(v.y, v.x)-3.1415f/2, { sprite->width * scale / 2, sprite->height * scale / 2 }, { scale,scale });
+		//canvas.DrawDecal(pos + offset, decal.get(), { scale,scale });
 	}
 
 	int bounce_death_action() override {
@@ -426,8 +426,8 @@ public:
 
 			if (charging) {
 				shoot_strength += fElapsedTime;
-				DrawRect(selected_player->pos + olc::vf2d(0, 5) - camera, olc::vf2d(10, 3), olc::RED);
-				DrawRect(selected_player->pos + olc::vf2d(0, 5) - camera, olc::vf2d(10 * shoot_strength, 3), olc::GREEN);
+				FillRect(selected_player->pos + olc::vf2d(-selected_player->r, selected_player->r) - camera, olc::vf2d(selected_player->r*2, 3), olc::RED);
+				FillRect(selected_player->pos + olc::vf2d(-selected_player->r, selected_player->r) - camera, olc::vf2d(selected_player->r * 2 * shoot_strength, 3), olc::DARK_GREEN);
 				if (shoot_strength >= 1) {
 					shoot_strength = 1;
 					charging = false;

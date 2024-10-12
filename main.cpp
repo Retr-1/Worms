@@ -175,7 +175,7 @@ class Window : public olc::PixelGameEngine
 	std::vector<std::vector<TerrainType>> terrain;
 	olc::vi2d terrain_size = { 800, 400 };
 
-	olc::vi2d camera;
+	olc::vf2d camera;
 
 	std::list<std::unique_ptr<PhysicsObject>> objects;
 
@@ -337,11 +337,11 @@ public:
 		}
 
 		if (followed_object) {
-			camera += (followed_object->pos - (camera + GetScreenSize() / 2)) * 0.1f;
+			camera += (followed_object->pos - (camera + GetScreenSize() / 2)) * fElapsedTime;
 		}
 
-		camera.x = std::max(0, std::min(terrain_size.x - ScreenWidth(), camera.x));
-		camera.y = std::max(0, std::min(terrain_size.y - ScreenWidth(), camera.y));
+		camera.x = std::max(0.0f, std::min((float)terrain_size.x - ScreenWidth(), camera.x));
+		camera.y = std::max(0.0f, std::min((float)terrain_size.y - ScreenWidth(), camera.y));
 		//std::cout << camera.str() << '\n';
 
 		for (int i = 0; i < 5; i++) {

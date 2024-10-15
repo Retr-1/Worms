@@ -6,8 +6,17 @@
 #include <memory>
 
 enum BounceDeathActions {
-	DO_NOTHING,
+	DO_NOTHING = 0,
 	EXPLOSION_LARGE
+};
+
+enum Phase {
+	RESET,
+	GENERATE_TERRAIN,
+	DEPLOY_TROOPS,
+	DEPLOYING_TROOPS,
+	START_PLAY,
+	CAMERA_MODE
 };
 
 class PhysicsObject {
@@ -183,8 +192,11 @@ class Window : public olc::PixelGameEngine
 	const float aim_r = 8;
 	float shoot_strength = 0;
 	bool charging = false;
+	bool shot = false;
 	Worm* selected_player = nullptr;
 	PhysicsObject* followed_object = nullptr;
+
+	Phase game_state = RESET;
 
 
 	void boom(const olc::vf2d& expl_pos, float radius) {
@@ -235,6 +247,24 @@ class Window : public olc::PixelGameEngine
 			d->set_size(2.5);
 			objects.push_back(std::move(d));
 		}
+	}
+
+	void deploy_troop(const olc::vf2d& pos) {
+		std::unique_ptr<Worm> d = std::make_unique<Worm>();
+		d->set_r(6);
+		d->pos = pos;
+		selected_player = d.get();
+		objects.push_back(std::move(d));
+
+	}
+
+	bool are_all_stable() {
+		for (auto& obj : objects) {
+			if (!obj->stable) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	//void shoot_from_player() {
@@ -344,6 +374,52 @@ public:
 		camera.y = std::max(0.0f, std::min((float)terrain_size.y - ScreenWidth(), camera.y));
 		//std::cout << camera.str() << '\n';
 
+		Phase next_game_state = game_state;
+		switch (game_state) {
+		case RESET:
+			next_game_state = DEPLOY_TROOPS;
+			break;
+
+		case DEPLOY_TROOPS:
+			deploy_troop(olc::vf2d(200, 20));
+			deploy_troop(olc::vf2d(100, 20));
+			next_game_state = DEPLOYING_TROOPS;
+			break;
+
+		case DEPLOYING_TROOPS:
+			if (are_all_stable()) {
+				next_game_state = START_PLAY;
+			}
+			else {
+				next_game_state = DEPLOYING_TROOPS;
+			}
+			break;
+
+		case START_PLAY:
+			if (shot) {
+				shot = false;
+				next_game_state = CAMERA_MODE;
+			}
+			else {
+				followed_object = selected_player;
+				next_game_state = START_PLAY;
+			}
+			break;
+
+		case CAMERA_MODE:
+			if (are_all_stable()) {
+				followed_object = nullptr;
+				next_game_state = START_PLAY;
+			}
+			else {
+				next_game_state = CAMERA_MODE;
+			}
+			break;
+		}
+		game_state = next_game_state;
+
+		// PHYSIX SHIT
+
 		for (int i = 0; i < 5; i++) {
 			for (auto& obj : objects) {
 				if (obj->stable) continue;
@@ -387,6 +463,9 @@ public:
 							boom(obj->pos, 20);
 						}
 						obj->n_bounces--;
+						if (obj->dead && obj.get() == followed_object) {
+							followed_object = nullptr;
+						}
 					}
 				}
 				else {
@@ -396,6 +475,8 @@ public:
 				obj->a = olc::vf2d(0, 0);
 			}
 		}
+
+		// DRAWING
 
 		for (int x = 0; x < ScreenWidth(); x++) {
 			for (int y = 0; y<ScreenHeight(); y++) {
@@ -419,7 +500,7 @@ public:
 		}
 
 
-		if (selected_player) {
+		if (selected_player && game_state == START_PLAY) {
 			auto dir = olc::vf2d(cosf(aim_angle), sinf(aim_angle));
 			auto dir_l = olc::vf2d(cosf(3.1415 + aim_angle + 1), sinf(3.1415 + aim_angle + 1));
 			auto dir_r = olc::vf2d(cosf(3.1415 + aim_angle - 1), sinf(3.1415 + aim_angle - 1));
@@ -442,14 +523,17 @@ public:
 				if (selected_player) {
 					std::unique_ptr<Missile> m = std::make_unique<Missile>();
 					m->pos = arrow_end + camera;
-					m->v = dir * shoot_strength * 40;
+					m->v = dir * shoot_strength * 60;
+					followed_object = m.get();
 					objects.push_back(std::move(m));
+					shot = true;
+					
 				}
 				shoot_strength = 0;
 			}
 		}
 		
-
+		
 		return true;
 	}
 };

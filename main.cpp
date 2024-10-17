@@ -91,7 +91,7 @@ public:
 	float default_size = 8;
 
 	Debris(int r = 4) : PhysicsObject(r) {
-		n_bounces = 4;
+		n_bounces = 3;
 	}
 
 	void draw(olc::PixelGameEngine& canvas, olc::vf2d& offset) override {
@@ -261,6 +261,7 @@ class Window : public olc::PixelGameEngine
 	bool are_all_stable() {
 		for (auto& obj : objects) {
 			if (!obj->stable) {
+				//std::cout << obj->r << '\n';
 				return false;
 			}
 		}
@@ -435,7 +436,10 @@ public:
 					olc::vf2d vec_mv = { cosf(a) * obj->r, sinf(a) * obj->r };
 					olc::vf2d test_pos = potential_pos + vec_mv;
 
-					if (test_pos.x < 0 || test_pos.x > terrain_size.x || test_pos.y < 0 || test_pos.y > terrain_size.y) continue;
+					if (test_pos.x < 0 || test_pos.x > terrain_size.x || test_pos.y < 0 || test_pos.y > terrain_size.y) {
+						obj->dead = true;
+						continue;
+					}
 
 					if (terrain[(int)test_pos.y][(int)test_pos.x] == GROUND) {
 						b_collision = true;
@@ -448,7 +452,7 @@ public:
 					vec_response = vec_response.norm();
 					obj->v = obj->v - 2 * (obj->v.dot(vec_response)) * vec_response;
 					obj->v *= obj->friction;
-					if (obj->v.mag() < 0.1f) {
+					if (obj->v.mag() < 1.0f) {
 						obj->stable = true;
 						obj->v.x = 0;
 						obj->v.y = 0;

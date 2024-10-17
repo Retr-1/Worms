@@ -313,19 +313,22 @@ public:
 	bool OnUserUpdate(float fElapsedTime) override
 	{
 		const int border = 50;
+		float scroll_speed = 100;
+		if (game_state == START_PLAY)
+			scroll_speed = 400;
 		if (GetMouseX() < border) {
 			//std::cout << "LEFT\n";
-			camera.x--;
+			camera.x-=fElapsedTime*scroll_speed;
 		}
 		if (GetMouseX() > ScreenWidth() - border) {
 			/*std::cout << "RIGHT\n";*/
-			camera.x++;
+			camera.x+=scroll_speed*fElapsedTime;
 		}
 		if (GetMouseY() < border) {
-			camera.y--;
+			camera.y-=scroll_speed*fElapsedTime;
 		}
 		if (GetMouseY() > ScreenHeight() - border) {
-			camera.y++;
+			camera.y+=scroll_speed*fElapsedTime;
 		}
 
 		if (GetMouse(0).bPressed) {
@@ -368,7 +371,7 @@ public:
 		}
 
 		if (followed_object) {
-			camera += (followed_object->pos - (camera + GetScreenSize() / 2)) * fElapsedTime;
+			camera += (followed_object->pos - (camera + GetScreenSize() / 2)) * fElapsedTime * 5.0f;
 		}
 
 		camera.x = std::max(0.0f, std::min((float)terrain_size.x - ScreenWidth(), camera.x));
